@@ -153,3 +153,27 @@ exports.check = (req, res, next) => {
         answer
     });
 };
+
+exports.randomplay = (req, res, next) => {
+  
+  req.session.score = req.session.score || 0;
+  var answer = req.query.answer || "";
+  
+  models.quiz.findAll()
+  .then(quiz => {
+    req.session.quiz = req.session.quiz || quiz;
+    
+    while(quiz === 0){
+      var pos = Math.floor(Math.random()*req.session.quiz.length);
+      if (pos === quizzes.length) {pos--;}
+      quiz = req.session.quizzes[pos];
+    }
+    req.session.quiz[pos] = 0;
+    
+    res.render('/quizzes/randomplay', {
+      quiz: quiz,
+      answer: answer,
+      score: req.session.score
+    });
+  })
+                       }
