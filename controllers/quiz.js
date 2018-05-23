@@ -170,10 +170,40 @@ exports.randomplay = (req, res, next) => {
     }
     req.session.quiz[pos] = 0;
     
-    res.render('/quizzes/randomplay', {
+    res.render('quizzes/random_play', {
       quiz: quiz,
       answer: answer,
       score: req.session.score
     });
-  })
-                       }
+  });
+};
+
+exports.randomcheck = (req, res, next) => {
+  const {quiz, query} = req;
+  
+  const answer = query.answer || "";
+  const result = answer.toLowerCase().trim() === quiz.answer.toLowerCase().trim;
+  
+  if(result) {
+    req.session.score++;
+    if(req.session.toBeResolved.length === 0) {
+      req.session.toBeResolved === undefined;
+      res.render('quizzes/random_nomore', {
+        score: req.session.score
+      })
+    } else {
+      res.render('quizzes/random_result', {
+        answer: answer,
+        socre: req.session.score, 
+        result: result
+      })
+    }
+  } else {
+    req.session.toBeResolved === undefined;
+    res.render('quizzes/random_result', {
+      answer: answer,
+      score: req.session.score,
+      result: result
+    });
+  };
+};
