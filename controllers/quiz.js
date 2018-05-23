@@ -4,7 +4,7 @@ const {models} = require("../models");
 // Autoload the quiz with id equals to :quizId
 exports.load = (req, res, next, quizId) => {
 
-    models.quiz.findById(quizId)
+    models.quizzes.findById(quizId)
     .then(quiz => {
         if (quiz) {
             req.quiz = quiz;
@@ -20,7 +20,7 @@ exports.load = (req, res, next, quizId) => {
 // GET /quizzes
 exports.index = (req, res, next) => {
 
-    models.quiz.findAll()
+    models.quizzes.findAll()
     .then(quizzes => {
         res.render('quizzes/index.ejs', {quizzes});
     })
@@ -53,7 +53,7 @@ exports.create = (req, res, next) => {
 
     const {question, answer} = req.body;
 
-    const quiz = models.quiz.build({
+    const quiz = models.quizzes.build({
         question,
         answer
     });
@@ -156,25 +156,36 @@ exports.check = (req, res, next) => {
 
 exports.randomplay = (req, res, next) => {
   
-  req.session.score = req.session.score || 0;
-  var answer = req.query.answer || "";
+  req.session.randomPlay = req.session.randomPlay || [];
   
-  models.quiz.findAll()
-  .then(quiz => {
-    req.session.quiz = req.session.quiz || quiz;
-    
-    while(quiz === 0){
-      var pos = Math.floor(Math.random()*req.session.quiz.length);
-      if (pos === quizzes.length) {pos--;}
-      quiz = req.session.quizzes[pos];
+  const toBeResolved = {'id': {[Sequelize.Op.notIn]: req.session.randomPlay}};
+  
+  let score = req.session.randomPlay.length;
+  
+  models.quizzes.count({
+    where: toBeResolved
+  })
+  .then(count => {
+    if(count === 0) {
+      req.session.randomPlay = [];
+      res.render('quizzes/random_nomore', {score: score})
+    } else {
+      let random = Math.random();
+      models.quizzes.find({
+        where: toBeResolved,
+        offset: Math.floor(random*count),
+        limit: 1
+      })
+      .then(quiz => {
+        res.render('quizzes/random_play', {
+          quiz: quiz,
+          score: score
+        });
+      })
+      .catch(error => {
+        next(error);
+      });
     }
-    req.session.quiz[pos] = 0;
-    
-    res.render('quizzes/random_play', {
-      quiz: quiz,
-      answer: answer,
-      score: req.session.score
-    });
   });
 };
 
@@ -182,28 +193,20 @@ exports.randomcheck = (req, res, next) => {
   const {quiz, query} = req;
   
   const answer = query.answer || "";
-  const result = answer.toLowerCase().trim() === quiz.answer.toLowerCase().trim;
+  const result = (answer.toLowerCase().trim() === quiz.answer.toLowerCase().trim());
+  console.log(answer);
+  console.log(quiz.answer);
+  console.log(result);
   
   if(result) {
-    req.session.score++;
-    if(req.session.toBeResolved.length === 0) {
-      req.session.toBeResolved === undefined;
-      res.render('quizzes/random_nomore', {
-        score: req.session.score
-      })
-    } else {
-      res.render('quizzes/random_result', {
-        answer: answer,
-        socre: req.session.score, 
-        result: result
-      })
+    if(!req.session.randomPlay.includes(quiz.id)){
+      req.session.randomPlay.push(quiz.id);
     }
-  } else {
-    req.session.toBeResolved === undefined;
+  } 
     res.render('quizzes/random_result', {
       answer: answer,
-      score: req.session.score,
+      score: req.session.randomPlay.length,
       result: result
     });
-  };
 };
+  
