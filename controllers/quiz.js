@@ -7,6 +7,7 @@ const paginate = require('../helpers/paginate').paginate;
 // Autoload the quiz with id equals to :quizId
 exports.load = (req, res, next, quizId) => {
 
+<<<<<<< HEAD
     models.quiz.findById(quizId, {
         include: [
             {model: models.tip,
@@ -14,6 +15,9 @@ exports.load = (req, res, next, quizId) => {
             {model: models.user, as: 'author'}
         ]
     })
+=======
+    models.quizzes.findById(quizId)
+>>>>>>> practica6
     .then(quiz => {
         if (quiz) {
             req.quiz = quiz;
@@ -44,6 +48,7 @@ exports.adminOrAuthorRequired = (req, res, next) => {
 // GET /quizzes
 exports.index = (req, res, next) => {
 
+<<<<<<< HEAD
     let countOptions = {
         where: {}
     };
@@ -87,6 +92,9 @@ exports.index = (req, res, next) => {
 
         return models.quiz.findAll(findOptions);
     })
+=======
+    models.quizzes.findAll()
+>>>>>>> practica6
     .then(quizzes => {
         res.render('quizzes/index.ejs', {
             quizzes, 
@@ -123,9 +131,13 @@ exports.create = (req, res, next) => {
 
     const {question, answer} = req.body;
 
+<<<<<<< HEAD
     const authorId = req.session.user && req.session.user.id || 0;
 
     const quiz = models.quiz.build({
+=======
+    const quiz = models.quizzes.build({
+>>>>>>> practica6
         question,
         answer,
         authorId
@@ -226,3 +238,60 @@ exports.check = (req, res, next) => {
         answer
     });
 };
+
+exports.randomplay = (req, res, next) => {
+  
+  req.session.randomPlay = req.session.randomPlay || [];
+  
+  const toBeResolved = {'id': {[Sequelize.Op.notIn]: req.session.randomPlay}};
+  
+  let score = req.session.randomPlay.length;
+  
+  models.quizzes.count({
+    where: toBeResolved
+  })
+  .then(count => {
+    if(count === 0) {
+      req.session.randomPlay = [];
+      res.render('quizzes/random_nomore', {score: score})
+    } else {
+      let random = Math.random();
+      models.quizzes.find({
+        where: toBeResolved,
+        offset: Math.floor(random*count),
+        limit: 1
+      })
+      .then(quiz => {
+        res.render('quizzes/random_play', {
+          quiz: quiz,
+          score: score
+        });
+      })
+      .catch(error => {
+        next(error);
+      });
+    }
+  });
+};
+
+exports.randomcheck = (req, res, next) => {
+  const {quiz, query} = req;
+  
+  const answer = query.answer || "";
+  const result = (answer.toLowerCase().trim() === quiz.answer.toLowerCase().trim());
+  console.log(answer);
+  console.log(quiz.answer);
+  console.log(result);
+  
+  if(result) {
+    if(!req.session.randomPlay.includes(quiz.id)){
+      req.session.randomPlay.push(quiz.id);
+    }
+  } 
+    res.render('quizzes/random_result', {
+      answer: answer,
+      score: req.session.randomPlay.length,
+      result: result
+    });
+};
+  
